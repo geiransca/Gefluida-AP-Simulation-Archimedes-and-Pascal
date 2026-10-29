@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FluidaLab 3D: Eksplorasi Hukum Pascal & Archimedes</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Three.js for 3D & WebXR AR -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- MathJax for rendering physics formulas -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            dark: '#0B132B',
+                            navy: '#1C2541',
+                            blue: '#3A506B',
+                            cyan: '#00B4D8',
+                            sky: '#90E0EF',
+                            accent: '#FF70A6',
+                            orange: '#FF9F1C',
+                            light: '#F8FAFCE'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0F172A; color: #F8FAFC; }
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glass-card {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(0, 180, 216, 0.5);
+            transform: translateY(-2px);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 20px rgba(0, 180, 216, 0.35);
+        }
+        .glow-orange {
+            box-shadow: 0 0 20px rgba(255, 159, 28, 0.35);
+        }
+        canvas { outline: none; }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0F172A; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00B4D8; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between overflow-x-hidden">
+
+    <!-- HEADER / NAVIGATION -->
+    <header class="fixed top-0 left-0 right-0 z-50 glass-panel border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('beranda')">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg glow-cyan">
+                        <i class="fa-solid font-bold fa-atom"></i>
+                    </div>
+                    <div>
+                        <span class="text-xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-sky-200 to-white">FluidaLab 3D</span>
+                        <span class="block text-[10px] text-cyan-400 font-mono tracking-widest uppercase">Eksplorasi WebAR Fisika</span>
+                    </div>
+                </div>
+
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex items-center space-x-1">
+                    <button onclick="switchTab('beranda')" id="nav-beranda" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors text-cyan-400 bg-slate-800/80"><i class="fa-solid fa-house mr-1.5"></i> Beranda</button>
+                    <button onclick="switchTab('materi')" id="nav-materi" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors text-slate-300 hover:text-white hover:bg-slate-800/50"><i class="fa-solid fa-book-open mr-1.5"></i> Materi</button>
+                    <button onclick="switchTab('simulasi')" id="nav-simulasi" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors text-slate-300 hover:text-white hover:bg-slate-800/50"><i class="fa-solid fa-cube mr-1.5"></i> Simulasi 3D/AR</button>
+                    <button onclick="switchTab('lkpd')" id="nav-lkpd" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors text-slate-300 hover:text-white hover:bg-slate-800/50"><i class="fa-solid fa-file-pen mr-1.5"></i> LKPD</button>
+                    <button onclick="switchTab('latihan')" id="nav-latihan" class="nav-btn px-4 py-2 rounded-lg text-sm font-medium transition-colors text-slate-300 hover:text-white hover:bg-slate-800/50"><i class="fa-solid fa-graduation-cap mr-1.5"></i> Latihan Soal</button>
+                </nav>
+
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden">
+                    <button id="mobile-menu-btn" onclick="toggleMobileMenu()" class="p-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800">
+                        <i class="fa-solid fa-bars text-xl"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mobile Navigation Menu -->
+        <div id="mobile-menu" class="hidden md:hidden border-t border-slate-800 bg-slate-900/95 backdrop-blur-lg px-4 pt-2 pb-4 space-y-1">
+            <button onclick="switchTab('beranda'); toggleMobileMenu()" class="w-full text-left px-3 py-2 rounded-lg text-base font-medium text-slate-200 hover:bg-slate-800"><i class="fa-solid fa-house w-6"></i> Beranda</button>
+            <button onclick="switchTab('materi'); toggleMobileMenu()" class="w-full text-left px-3 py-2 rounded-lg text-base font-medium text-slate-200 hover:bg-slate-800"><i class="fa-solid fa-book-open w-6"></i> Materi</button>
+            <button onclick="switchTab('simulasi'); toggleMobileMenu()" class="w-full text-left px-3 py-2 rounded-lg text-base font-medium text-slate-200 hover:bg-slate-800"><i class="fa-solid fa-cube w-6"></i> Simulasi 3D/AR</button>
+            <button onclick="switchTab('lkpd'); toggleMobileMenu()" class="w-full text-left px-3 py-2 rounded-lg text-base font-medium text-slate-200 hover:bg-slate-800"><i class="fa-solid fa-file-pen w-6"></i> LKPD</button>
+            <button onclick="switchTab('latihan'); toggleMobileMenu()" class="w-full text-left px-3 py-2 rounded-lg text-base font-medium text-slate-200 hover:bg-slate-800"><i class="fa-solid fa-graduation-cap w-6"></i> Latihan Soal</button>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER -->
+    <main class="flex-grow pt-20 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+
+        <!-- ================= SECTION: BERANDA ================= -->
+        <section id="tab-beranda" class="tab-content space-y-12 py-6">
+            <!-- Hero Section -->
+            <div class="relative rounded-3xl overflow-hidden glass-panel p-8 sm:p-12 border border-slate-700/50 bg-gradient-to-br from-slate-900 via-slate-900/90 to-blue-950/40">
+                <div class="absolute -right-20 -top-20 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute right-1/3 -bottom-20 w-80 h-80 bg-orange-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div class="relative z-10 max-w-3xl space-y-6">
+                    <div class="inline-flex items-center space-x-2 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono font-semibold">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                        <span>Laboratorium Fisika Virtual & Augmented Reality</span>
+                    </div>
+                    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-none text-white">
+                        Belajar Fisika dengan <span class="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-sky-300 to-orange-400">Mengalami Eksperimennya</span>
+                    </h1>
+                    <p class="text-slate-300 text-lg leading-relaxed">
+                        Pelajari konsep dasar tekanan dan gaya apung secara intuitif. Manipulasi parameter sistem secara *real-time*, amati animasi fisika 3D interaktif, serta bawa eksperimen langsung ke dunia nyata dengan Augmented Reality (AR).
+                    </p>
+                    <div class="flex flex-wrap gap-4 pt-2">
+                        <button onclick="switchTab('simulasi')" class="px-6 py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold text-base shadow-lg hover:shadow-cyan-500/25 transition-all transform hover:-translate-y-0.5 flex items-center space-x-2">
+                            <i class="fa-solid fa-flask text-lg"></i>
+                            <span>Mulai Simulasi 3D</span>
+                        </button>
+                        <button onclick="switchTab('materi')" class="px-6 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-semibold text-base transition-all flex items-center space-x-2">
+                            <i class="fa-solid fa-book-open text-lg"></i>
+                            <span>Pelajari Materi</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Learning Objectives Section -->
+            <div class="space-y-6">
+                <div class="text-center max-w-2xl mx-auto">
+                    <h2 class="text-2xl sm:text-3xl font-extrabold text-white">Tujuan Pembelajaran</h2>
+                    <p class="text-slate-400 text-sm mt-1">Capaian kompetensi eksperimen Fluida Statis</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="glass-card p-6 rounded-2xl relative overflow-hidden group">
+                        <div class="w-12 h-12 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xl font-bold mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-gauge-high"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">1. Hukum Pascal</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Menjelaskan prinsip penerusan tekanan pada ruang tertutup dan menganalisis hubungan gaya serta luas penampang pada sistem hidrolik.
+                        </p>
+                    </div>
+
+                    <div class="glass-card p-6 rounded-2xl relative overflow-hidden group">
+                        <div class="w-12 h-12 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center text-xl font-bold mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-water"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">2. Hukum Archimedes</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Memahami konsep gaya apung ($F_A$), volume fluida yang dipindahkan, serta faktor massa jenis fluida terhadap posisi benda.
+                        </p>
+                    </div>
+
+                    <div class="glass-card p-6 rounded-2xl relative overflow-hidden group">
+                        <div class="w-12 h-12 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center text-xl font-bold mb-4 group-hover:scale-110 transition-transform">
+                            <i class="fa-solid fa-vial-circle-check"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">3. Analisis & Evaluasi</h3>
+                        <p class="text-slate-400 text-sm leading-relaxed">
+                            Mengumpulkan data melalui Lembar Kerja Peserta Didik (LKPD) virtual dan menguji pemahaman dengan kuis kognitif ber-umpan balik otomatis.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Experiment Quick Links -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
+                <!-- Card Pascal -->
+                <div class="glass-panel p-8 rounded-3xl border border-cyan-500/30 flex flex-col justify-between space-y-6 relative overflow-hidden">
+                    <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-cyan-500/10 rounded-full blur-2xl"></div>
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-mono bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">Eksperimen 01</span>
+                            <i class="fa-solid fa-compress text-2xl text-cyan-400"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Sistem Hidrolik 3D</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            Operasikan sistem dongkrak hidrolik virtual. Ubah gaya masukan ($F_1$) dan rasio luas penampang ($A_1/A_2$), lalu amati penggandaan gaya serta perpindahan beban.
+                        </p>
+                    </div>
+                    <button onclick="openSimulation('pascal')" class="w-full py-3 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-bold text-sm transition-all flex items-center justify-center space-x-2">
+                        <span>Buka Simulasi Pascal</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+
+                <!-- Card Archimedes -->
+                <div class="glass-panel p-8 rounded-3xl border border-orange-500/30 flex flex-col justify-between space-y-6 relative overflow-hidden">
+                    <div class="absolute -right-10 -bottom-10 w-40 h-40 bg-orange-500/10 rounded-full blur-2xl"></div>
+                    <div>
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-mono bg-orange-500/20 text-orange-300 border border-orange-500/30">Eksperimen 02</span>
+                            <i class="fa-solid fa-ship text-2xl text-orange-400"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Tangki Gaya Apung 3D</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            Uji benda dalam fluida air, minyak, atau air laut. Atur massa dan volume benda untuk membuktikan kondisi Mengapung, Melayang, atau Tenggelam secara akurat.
+                        </p>
+                    </div>
+                    <button onclick="openSimulation('archimedes')" class="w-full py-3 rounded-xl bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/40 font-bold text-sm transition-all flex items-center justify-center space-x-2">
+                        <span>Buka Simulasi Archimedes</span>
+                        <i class="fa-solid fa-arrow-right"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= SECTION: MATERI ================= -->
+        <section id="tab-materi" class="tab-content hidden space-y-8 py-6">
+            <div class="text-center max-w-2xl mx-auto">
+                <h1 class="text-3xl font-extrabold text-white">Materi Fluida Statis</h1>
+                <p class="text-slate-400 text-sm mt-1">6 Subbab Pembelajaran Konsep & Terapan</p>
+            </div>
+
+            <!-- Subbab Cards Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- Subbab 1 -->
+                <div class="glass-card rounded-2xl p-6 flex flex-col justify-between space-y-4 cursor-pointer hover:border-cyan-400/50" onclick="openMateriModal(1)">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-mono font-bold text-cyan-400 bg-cyan-950 px-2.5 py-1 rounded-md border border-cyan-800">Subbab 01</span>
+                            <i class="fa-solid fa-square-root-variable text-slate-400"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">Hukum Pascal</h3>
+                        <p class="text-xs text-slate-400 line-clamp-3">
+                            Tekanan yang diberikan pada fluida dalam ruang tertutup diteruskan sama besar ke segala arah.
+                        </p>
+                    </div>
+                    <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-xs font-semibold text-cyan-400">
+                        <span>Baca Selengkapnya</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                </div>
+
+                <!-- Subbab 2 -->
+                <div class="glass-card rounded-2xl p-6 flex flex-col justify-between space-y-4 cursor-pointer hover:border-cyan-400/50" onclick="openMateriModal(2)">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-mono font-bold text-cyan-400 bg-cyan-950 px-2.5 py-1 rounded-md border border-cyan-800">Subbab 02</span>
+                            <i class="fa-solid fa-truck-pickup text-slate-400"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">Prinsip Alat Hidrolik</h3>
+                        <p class="text-xs text-slate-400 line-clamp-3">
+                            Penggandaan gaya pada dongkrak hidrolik, mesin pres, dan rem kendaraan berbasis perbandingan penampang.
+                        </p>
+                    </div>
+                    <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-xs font-semibold text-cyan-400">
+                        <span>Baca Selengkapnya</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                </div>
+
+                <!-- Subbab 3 -->
+                <div class="glass-card rounded-2xl p-6 flex flex-col justify-between space-y-4 cursor-pointer hover:border-orange-400/50" onclick="openMateriModal(3)">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-mono font-bold text-orange-400 bg-orange-950 px-2.5 py-1 rounded-md border border-orange-800">Subbab 03</span>
+                            <i class="fa-solid fa-anchor text-slate-400"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">Hukum Archimedes</h3>
+                        <p class="text-xs text-slate-400 line-clamp-3">
+                            Gaya apung yang bekerja pada benda sama dengan berat fluida yang dipindahkan oleh benda tersebut.
+                        </p>
+                    </div>
+                    <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-xs font-semibold text-orange-400">
+                        <span>Baca Selengkapnya</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                </div>
+
+                <!-- Subbab 4 -->
+                <div class="glass-card rounded-2xl p-6 flex flex-col justify-between space-y-4 cursor-pointer hover:border-orange-400/50" onclick="openMateriModal(4)">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-mono font-bold text-orange-400 bg-orange-950 px-2.5 py-1 rounded-md border border-orange-800">Subbab 04</span>
+                            <i class="fa-solid fa-water text-slate-400"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">Gaya Apung ($F_A$)</h3>
+                        <p class="text-xs text-slate-400 line-clamp-3">
+                            Analisis matematis hubungan antara massa jenis fluida, percepatan gravitasi, dan volume fluida tercelup.
+                        </p>
+                    </div>
+                    <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-xs font-semibold text-orange-400">
+                        <span>Baca Selengkapnya</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                </div>
+
+                <!-- Subbab 5 -->
+                <div class="glass-card rounded-2xl p-6 flex flex-col justify-between space-y-4 cursor-pointer hover:border-orange-400/50" onclick="openMateriModal(5)">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-mono font-bold text-orange-400 bg-orange-950 px-2.5 py-1 rounded-md border border-orange-800">Subbab 05</span>
+                            <i class="fa-solid fa-[#00B4D8] fa-cubes text-slate-400"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">Mengapung, Melayang, Tenggelam</h3>
+                        <p class="text-xs text-slate-400 line-clamp-3">
+                            Perbandingan massa jenis rata-rata benda ($\rho_b$) dan massa jenis fluida ($\rho_f$) serta posisi kesetimbangannya.
+                        </p>
+                    </div>
+                    <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-xs font-semibold text-orange-400">
+                        <span>Baca Selengkapnya</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                </div>
+
+                <!-- Subbab 6 -->
+                <div class="glass-card rounded-2xl p-6 flex flex-col justify-between space-y-4 cursor-pointer hover:border-purple-400/50" onclick="openMateriModal(6)">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-xs font-mono font-bold text-purple-400 bg-purple-950 px-2.5 py-1 rounded-md border border-purple-800">Subbab 06</span>
+                            <i class="fa-solid fa-ship text-slate-400"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-white mb-2">Aplikasi Kehidupan Nyata</h3>
+                        <p class="text-xs text-slate-400 line-clamp-3">
+                            Penerapan konsep pada kapal laut, kapal selam, hidrometer, balok apung, dan sistem rem hidrolik.
+                        </p>
+                    </div>
+                    <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-xs font-semibold text-purple-400">
+                        <span>Baca Selengkapnya</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- MATERI MODAL POPUP -->
+        <div id="materi-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+            <div class="glass-panel w-full max-w-3xl max-h-[85vh] rounded-3xl overflow-hidden flex flex-col border border-slate-700 shadow-2xl animate-fade-in">
+                <!-- Modal Header -->
+                <div class="p-6 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+                    <div id="materi-modal-title-container">
+                        <!-- Dynamic Title -->
+                    </div>
+                    <button onclick="closeMateriModal()" class="w-10 h-10 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition-colors">
+                        <i class="fa-solid fa-xmark text-lg"></i>
+                    </button>
+                </div>
+                <!-- Modal Content -->
+                <div id="materi-modal-body" class="p-6 overflow-y-auto space-y-6 text-slate-300 text-sm leading-relaxed">
+                    <!-- Dynamic Body -->
+                </div>
+            </div>
+        </div>
+
+
+        <!-- ================= SECTION: SIMULASI 3D & WebAR ================= -->
+        <section id="tab-simulasi" class="tab-content hidden space-y-6 py-4">
+            
+            <!-- Sub Navigation Tabs for Simulation -->
+            <div class="flex items-center justify-center space-x-3 bg-slate-900/80 p-1.5 rounded-2xl border border-slate-800 max-w-md mx-auto">
+                <button id="sim-btn-pascal" onclick="switchSim('pascal')" class="flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all bg-cyan-500 text-white shadow-md">
+                    <i class="fa-solid fa-compress mr-1.5"></i> Hukum Pascal
+                </button>
+                <button id="sim-btn-archimedes" onclick="switchSim('archimedes')" class="flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-400 hover:text-white">
+                    <i class="fa-solid fa-ship mr-1.5"></i> Hukum Archimedes
+                </button>
+            </div>
+
+            <!-- SIMULASI 1: HUKUM PASCAL -->
+            <div id="sim-container-pascal" class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- 3D Viewport Column -->
+                <div class="lg:col-span-2 glass-panel rounded-3xl p-4 border border-slate-800 flex flex-col h-[520px] relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-2 px-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-cyan-400 animate-ping"></span>
+                            <h3 class="text-sm font-bold text-white font-mono">3D Interactive Hydraulic Viewport</h3>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="resetPascalSim()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700">
+                                <i class="fa-solid fa-rotate-left mr-1"></i> Reset View
+                            </button>
+                            <button onclick="triggerAR('pascal')" class="px-3 py-1 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 text-xs text-white font-bold shadow-md hover:brightness-110">
+                                <i class="fa-solid fa-vr-cardboard mr-1"></i> Lihat dalam AR
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Three.js Canvas Container -->
+                    <div id="canvas-pascal" class="flex-grow w-full h-full rounded-2xl bg-slate-950/80 relative cursor-grab active:cursor-grabbing overflow-hidden">
+                        <!-- Overlay Canvas Hints -->
+                        <div class="absolute bottom-3 left-3 pointer-events-none text-[11px] font-mono text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-md border border-slate-800">
+                            <i class="fa-solid fa-hand-pointer mr-1"></i> Drag / Rotate 3D Model | Scroll Zoom
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simulation Control Panel -->
+                <div class="glass-panel rounded-3xl p-6 border border-slate-800 flex flex-col justify-between space-y-6">
+                    <div>
+                        <h3 class="text-base font-bold text-white mb-4 pb-2 border-b border-slate-800 flex items-center justify-between">
+                            <span><i class="fa-solid fa-sliders text-cyan-400 mr-2"></i> Parameter Pascal</span>
+                            <span class="text-xs font-mono text-cyan-400">Ideal System</span>
+                        </h3>
+
+                        <div class="space-y-4">
+                            <!-- Gaya Masukan (F1) -->
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1">
+                                    <span class="text-slate-300">Gaya Masukan ($F_1$)</span>
+                                    <span id="val-f1" class="font-mono text-cyan-400 font-bold">100 N</span>
+                                </div>
+                                <input type="range" id="input-f1" min="10" max="500" step="10" value="100" oninput="updatePascalSim()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+                            </div>
+
+                            <!-- Luas Piston Kecil (A1) -->
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1">
+                                    <span class="text-slate-300">Luas Piston Kecil ($A_1$)</span>
+                                    <span id="val-a1" class="font-mono text-cyan-400 font-bold">5 cm²</span>
+                                </div>
+                                <input type="range" id="input-a1" min="1" max="20" step="1" value="5" oninput="updatePascalSim()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+                            </div>
+
+                            <!-- Luas Piston Besar (A2) -->
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1">
+                                    <span class="text-slate-300">Luas Piston Besar ($A_2$)</span>
+                                    <span id="val-a2" class="font-mono text-cyan-400 font-bold">100 cm²</span>
+                                </div>
+                                <input type="range" id="input-a2" min="20" max="300" step="10" value="100" oninput="updatePascalSim()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400">
+                            </div>
+                        </div>
+
+                        <!-- Realtime Computed Physics Cards -->
+                        <div class="mt-6 p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-3 font-mono text-xs">
+                            <div class="flex justify-between items-center text-slate-300">
+                                <span>Tekanan Fluida ($P$):</span>
+                                <span id="res-pascal-p" class="text-cyan-300 font-bold">200.000 Pa</span>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-300">
+                                <span>Gaya Keluaran ($F_2$):</span>
+                                <span id="res-pascal-f2" class="text-emerald-400 font-bold text-sm">2.000 N</span>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-300">
+                                <span>Faktor Penggandaan:</span>
+                                <span id="res-pascal-ratio" class="text-orange-400 font-bold">20x</span>
+                            </div>
+                            <div class="pt-2 border-t border-slate-800/80 text-[11px] text-slate-400 italic">
+                                <i class="fa-solid fa-circle-info mr-1 text-cyan-400"></i>
+                                <span id="res-pascal-desc">Luas $A_2$ 20 kali lipat dari $A_1$, menghasilkan gaya $F_2$ 20 kali lebih besar.</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="space-y-2">
+                        <button id="btn-press-pascal" onclick="pressPascalPiston()" class="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold text-sm shadow-lg transition-all flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-circle-down"></i>
+                            <span>Tekan Piston Masukan</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SIMULASI 2: HUKUM ARCHIMEDES -->
+            <div id="sim-container-archimedes" class="grid grid-cols-1 lg:grid-cols-3 gap-6 hidden">
+                <!-- 3D Viewport Column -->
+                <div class="lg:col-span-2 glass-panel rounded-3xl p-4 border border-slate-800 flex flex-col h-[520px] relative overflow-hidden">
+                    <div class="flex items-center justify-between mb-2 px-2">
+                        <div class="flex items-center space-x-2">
+                            <span class="w-3 h-3 rounded-full bg-orange-400 animate-ping"></span>
+                            <h3 class="text-sm font-bold text-white font-mono">3D Buoyancy Fluid Tank Viewport</h3>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="resetArchimedesSim()" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300 border border-slate-700">
+                                <i class="fa-solid fa-rotate-left mr-1"></i> Reset View
+                            </button>
+                            <button onclick="triggerAR('archimedes')" class="px-3 py-1 rounded-lg bg-gradient-to-r from-orange-500 to-amber-500 text-xs text-white font-bold shadow-md hover:brightness-110">
+                                <i class="fa-solid fa-vr-cardboard mr-1"></i> Lihat dalam AR
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Three.js Canvas Container -->
+                    <div id="canvas-archimedes" class="flex-grow w-full h-full rounded-2xl bg-slate-950/80 relative cursor-grab active:cursor-grabbing overflow-hidden">
+                        <!-- Overlay Canvas Hints -->
+                        <div class="absolute bottom-3 left-3 pointer-events-none text-[11px] font-mono text-slate-400 bg-slate-900/80 px-2.5 py-1 rounded-md border border-slate-800">
+                            <i class="fa-solid fa-hand-pointer mr-1"></i> Drag / Rotate 3D Model | Scroll Zoom
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Simulation Control Panel -->
+                <div class="glass-panel rounded-3xl p-6 border border-slate-800 flex flex-col justify-between space-y-6">
+                    <div>
+                        <h3 class="text-base font-bold text-white mb-4 pb-2 border-b border-slate-800 flex items-center justify-between">
+                            <span><i class="fa-solid fa-sliders text-orange-400 mr-2"></i> Parameter Archimedes</span>
+                            <span class="text-xs font-mono text-orange-400">$g = 9.8\text{ m/s}^2$</span>
+                        </h3>
+
+                        <div class="space-y-4">
+                            <!-- Jenis Fluida Preset -->
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-300 mb-1">Jenis Fluida ($\rho_f$)</label>
+                                <select id="select-fluida" onchange="updateArchimedesSim()" class="w-full bg-slate-900 border border-slate-700 text-white text-xs rounded-xl p-2.5 focus:border-orange-400 outline-none">
+                                    <option value="1000">Air Murni (1.000 kg/m³)</option>
+                                    <option value="800">Minyak (800 kg/m³)</option>
+                                    <option value="1025">Air Laut (1.025 kg/m³)</option>
+                                </select>
+                            </div>
+
+                            <!-- Massa Benda (m) -->
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1">
+                                    <span class="text-slate-300">Massa Benda ($m$)</span>
+                                    <span id="val-mass" class="font-mono text-orange-400 font-bold">0.25 kg</span>
+                                </div>
+                                <input type="range" id="input-mass" min="0.05" max="1.5" step="0.05" value="0.25" oninput="updateArchimedesSim()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-orange-400">
+                            </div>
+
+                            <!-- Volume Benda (Vb) -->
+                            <div>
+                                <div class="flex justify-between text-xs font-semibold mb-1">
+                                    <span class="text-slate-300">Volume Benda ($V_b$)</span>
+                                    <span id="val-vol" class="font-mono text-orange-400 font-bold">0.0005 m³</span>
+                                </div>
+                                <input type="range" id="input-vol" min="0.0001" max="0.0010" step="0.0001" value="0.0005" oninput="updateArchimedesSim()" class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-orange-400">
+                            </div>
+                        </div>
+
+                        <!-- Computed Buoyancy Physics Cards -->
+                        <div class="mt-6 p-4 rounded-2xl bg-slate-950/60 border border-slate-800 space-y-2.5 font-mono text-xs">
+                            <div class="flex justify-between items-center text-slate-300">
+                                <span>Massa Jenis Benda ($\rho_b$):</span>
+                                <span id="res-arch-rhob" class="text-amber-300 font-bold">500 kg/m³</span>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-300">
+                                <span>Berat Benda ($W$):</span>
+                                <span id="res-arch-w" class="text-rose-400 font-bold">2.45 N</span>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-300">
+                                <span>Gaya Apung ($F_A$):</span>
+                                <span id="res-arch-fa" class="text-emerald-400 font-bold">2.45 N</span>
+                            </div>
+                            <div class="flex justify-between items-center text-slate-300">
+                                <span>Kondisi Akhir:</span>
+                                <span id="res-arch-status" class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800">Mengapung</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Button -->
+                    <div class="space-y-2">
+                        <button id="btn-drop-archimedes" onclick="dropArchimedesObject()" class="w-full py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-white font-bold text-sm shadow-lg transition-all flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-water"></i>
+                            <span>Lepaskan Benda ke Dalam Fluida</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- ================= SECTION: LKPD ================= -->
+        <section id="tab-lkpd" class="tab-content hidden space-y-8 py-6">
+            <div class="text-center max-w-2xl mx-auto">
+                <h1 class="text-3xl font-extrabold text-white">Lembar Kerja Peserta Didik (LKPD)</h1>
+                <p class="text-slate-400 text-sm mt-1">Unduh & Catat Data Hasil Penyelidikan Virtual</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- LKPD 1 Card -->
+                <div class="glass-panel rounded-3xl p-6 border border-slate-800 flex flex-col justify-between space-y-6">
+                    <div class="space-y-4">
+                        <div class="w-12 h-12 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center text-xl font-bold">
+                            <i class="fa-solid fa-file-invoice"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">LKPD 1: Eksperimen Hukum Pascal</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            Penyelidikan pengaruh variasi luas penampang piston besar ($A_2$) terhadap gaya keluaran ($F_2$) dan tekanan fluida pada sistem dongkrak hidrolik.
+                        </p>
+                        <ul class="text-xs text-slate-400 space-y-1.5 list-disc list-inside">
+                            <li>Variabel Terkontrol: $F_1 = 100\text{ N}, A_1 = 5\text{ cm}^2$</li>
+                            <li>Tabel Pengamatan 3 Percobaan</li>
+                            <li>Pertanyaan Analisis & Kesimpulan Penyelidikan</li>
+                        </ul>
+                    </div>
+                    <button onclick="downloadLKPD('pascal')" class="w-full py-3 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-300 border border-cyan-500/40 font-bold text-sm transition-all flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-file-pdf text-lg"></i>
+                        <span>Cetak / Unduh LKPD Pascal (PDF)</span>
+                    </button>
+                </div>
+
+                <!-- LKPD 2 Card -->
+                <div class="glass-panel rounded-3xl p-6 border border-slate-800 flex flex-col justify-between space-y-6">
+                    <div class="space-y-4">
+                        <div class="w-12 h-12 rounded-xl bg-orange-500/20 text-orange-400 flex items-center justify-center text-xl font-bold">
+                            <i class="fa-solid fa-file-invoice"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-white">LKPD 2: Eksperimen Hukum Archimedes</h3>
+                        <p class="text-slate-300 text-sm leading-relaxed">
+                            Penyelidikan hubungan massa jenis benda ($\rho_b$) dan fluida ($\rho_f$) terhadap gaya apung ($F_A$) dan kondisi kesetimbangan benda.
+                        </p>
+                        <ul class="text-xs text-slate-400 space-y-1.5 list-disc list-inside">
+                            <li>Uji Benda dalam Air, Minyak, & Air Laut</li>
+                            <li>Pengukuran Volume Tercelup ($V_t$) & Gaya Apung</li>
+                            <li>Analisis Kondisi Mengapung, Melayang, & Tenggelam</li>
+                        </ul>
+                    </div>
+                    <button onclick="downloadLKPD('archimedes')" class="w-full py-3 rounded-xl bg-orange-500/20 hover:bg-orange-500/30 text-orange-300 border border-orange-500/40 font-bold text-sm transition-all flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-file-pdf text-lg"></i>
+                        <span>Cetak / Unduh LKPD Archimedes (PDF)</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ================= SECTION: LATIHAN SOAL ================= -->
+        <section id="tab-latihan" class="tab-content hidden space-y-8 py-6 max-w-4xl mx-auto">
+            <div class="text-center space-y-2">
+                <h1 class="text-3xl font-extrabold text-white">Latihan Soal & Evaluasi</h1>
+                <p class="text-slate-400 text-sm">10 Soal Pilihan Ganda Ber-Umpan Balik Otomatis</p>
+            </div>
+
+            <!-- Quiz Progress & Score Header -->
+            <div class="glass-panel p-4 rounded-2xl border border-slate-800 flex items-center justify-between font-mono text-xs">
+                <div class="flex items-center space-x-2">
+                    <span class="text-slate-400">Progres:</span>
+                    <span id="quiz-progress" class="text-cyan-400 font-bold">1 / 10</span>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-slate-400">Skor:</span>
+                    <span id="quiz-score" class="text-emerald-400 font-bold">0 Poin</span>
+                </div>
+            </div>
+
+            <!-- Quiz Container -->
+            <div id="quiz-card" class="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-800 space-y-6">
+                <!-- Question Title -->
+                <div class="space-y-2">
+                    <span id="quiz-category" class="px-2.5 py-1 rounded-md text-[11px] font-mono font-bold bg-cyan-950 text-cyan-400 border border-cyan-800">Hukum Pascal</span>
+                    <h3 id="quiz-question" class="text-lg font-bold text-white leading-relaxed">
+                        <!-- Dynamic Question Text -->
+                    </h3>
+                </div>
+
+                <!-- Options -->
+                <div id="quiz-options" class="space-y-3">
+                    <!-- Dynamic Options -->
+                </div>
+
+                <!-- Answer Explanation Box (Hidden initially) -->
+                <div id="quiz-explanation" class="hidden p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2 text-xs leading-relaxed">
+                    <!-- Dynamic Explanation -->
+                </div>
+
+                <!-- Action Footer -->
+                <div class="flex items-center justify-between pt-4 border-t border-slate-800">
+                    <button id="btn-prev-quiz" onclick="navigateQuiz(-1)" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold transition-all disabled:opacity-40">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> Sebelum
+                    </button>
+                    <button id="btn-next-quiz" onclick="navigateQuiz(1)" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs font-bold shadow-md hover:brightness-110 transition-all">
+                        Selanjutnya <i class="fa-solid fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-800/80 bg-slate-950 py-6 text-center text-xs text-slate-500 font-mono">
+        <div class="max-w-7xl mx-auto px-4">
+            FluidaLab 3D &copy; 2026 — Media Pembelajaran WebAR Fisika SMA/MA
+        </div>
+    </footer>
+
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        /* ================= NAVIGATION & TAB MANAGEMENT ================= */
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('text-cyan-400', 'bg-slate-800/80');
+                btn.classList.add('text-slate-300');
+            });
+            const activeNav = document.getElementById(`nav-${tabId}`);
+            if(activeNav) {
+                activeNav.classList.add('text-cyan-400', 'bg-slate-800/80');
+            }
+
+            if(tabId === 'simulasi') {
+                setTimeout(() => {
+                    onWindowResizePascal();
+                    onWindowResizeArchimedes();
+                }, 100);
+            }
+        }
+
+        function toggleMobileMenu() {
+            document.getElementById('mobile-menu').classList.toggle('hidden');
+        }
+
+        function openSimulation(type) {
+            switchTab('simulasi');
+            switchSim(type);
+        }
+
+        function switchSim(type) {
+            const pascalContainer = document.getElementById('sim-container-pascal');
+            const archContainer = document.getElementById('sim-container-archimedes');
+            const btnPascal = document.getElementById('sim-btn-pascal');
+            const btnArch = document.getElementById('sim-btn-archimedes');
+
+            if(type === 'pascal') {
+                pascalContainer.classList.remove('hidden');
+                archContainer.classList.add('hidden');
+                btnPascal.className = "flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all bg-cyan-500 text-white shadow-md";
+                btnArch.className = "flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-400 hover:text-white";
+                onWindowResizePascal();
+            } else {
+                pascalContainer.classList.add('hidden');
+                archContainer.classList.remove('hidden');
+                btnPascal.className = "flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all text-slate-400 hover:text-white";
+                btnArch.className = "flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all bg-orange-500 text-white shadow-md";
+                onWindowResizeArchimedes();
+            }
+        }
+
+        /* ================= MATERI DATA & MODAL ================= */
+        const materiData = {
+            1: {
+                title: "01. Hukum Pascal",
+                category: "Konsep Dasar",
+                content: `
+                    <p class="text-base text-slate-200">
+                        <b>Hukum Pascal</b> menyatakan bahwa tekanan yang diberikan kepada fluida dalam ruang tertutup akan diteruskan sama besar ke segala arah tanpa berkurang.
+                    </p>
+                    <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 text-center font-mono my-4">
+                        $$P_1 = P_2 \\implies \\frac{F_1}{A_1} = \\frac{F_2}{A_2}$$
+                    </div>
+                    <ul class="list-disc list-inside space-y-1 text-slate-300">
+                        <li><b>$F_1$</b> = Gaya masukan pada piston kecil (N)</li>
+                        <li><b>$A_1$</b> = Luas penampang piston kecil ($\text{m}^2$)</li>
+                        <li><b>$F_2$</b> = Gaya keluaran pada piston besar (N)</li>
+                        <li><b>$A_2$</b> = Luas penampang piston besar ($\text{m}^2$)</li>
+                    </ul>
+                    <p class="mt-4">
+                        <b>Contoh Soal:</b> Dongkrak hidrolik memiliki piston kecil $A_1 = 4\text{ cm}^2$ dan piston besar $A_2 = 80\text{ cm}^2$. Jika diberikan gaya masukan $F_1 = 50\text{ N}$, tentukan gaya keluaran $F_2$.<br>
+                        <b>Penyelesaian:</b> $F_2 = F_1 \\times \\left(\\frac{A_2}{A_1}\\right) = 50 \\times \\left(\\frac{80}{4}\\right) = 1.000\\text{ N}$.
+                    </p>
+                `
+            },
+            2: {
+                title: "02. Prinsip Kerja Alat Hidrolik",
+                category: "Aplikasi Teknologi",
+                content: `
+                    <p>Alat-alat hidrolik memanfaatkan prinsip Hukum Pascal untuk menggandakan gaya.</p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 my-4">
+                        <div class="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                            <h4 class="font-bold text-cyan-400 mb-1">Dongkrak & Pengangkat Mobil</h4>
+                            <p class="text-xs">Gaya kecil pada tuas kecil mampu mengangkat mobil berat di bengkel.</p>
+                        </div>
+                        <div class="p-3 rounded-xl bg-slate-900 border border-slate-800">
+                            <h4 class="font-bold text-cyan-400 mb-1">Rem Hidrolik Mobil</h4>
+                            <p class="text-xs">Tekanan dari pijakan kaki diteruskan melalui minyak rem ke kampas empat roda.</p>
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-400">
+                        <b>Konsep Konservasi Energi ($A_1 d_1 = A_2 d_2$):</b> Meskipun gaya diperbesar, kerja total tetap sama. Piston kecil bergerak lebih jauh ($d_1$) dibanding piston besar ($d_2$).
+                    </p>
+                `
+            },
+            3: {
+                title: "03. Hukum Archimedes",
+                category: "Gaya Apung",
+                content: `
+                    <p>
+                        <b>Hukum Archimedes</b> menyatakan bahwa benda yang dicelupkan sebagian atau seluruhnya ke dalam fluida akan mengalami <b>gaya apung ($F_A$)</b> ke atas yang besarnya sama dengan berat fluida yang dipindahkan oleh benda tersebut.
+                    </p>
+                    <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 text-center font-mono my-4">
+                        $$F_A = w_{\\text{fluida dipindahkan}} = m_f \\cdot g = \\rho_f \\cdot g \\cdot V_t$$
+                    </div>
+                `
+            },
+            4: {
+                title: "04. Gaya Apung ($F_A$)",
+                category: "Analisis Vektor",
+                content: `
+                    <p>Gaya apung terjadi karena perbedaan tekanan hidrostatis antara bagian bawah dan bagian atas benda yang terendam.</p>
+                    <ul class="list-disc list-inside space-y-2 mt-2">
+                        <li><b>$\rho_f$</b> = Massa jenis fluida ($\text{kg/m}^3$)</li>
+                        <li><b>$g$</b> = Percepatan gravitasi ($\text{m/s}^2$)</li>
+                        <li><b>$V_t$</b> = Volume bagian benda yang <u>tercelup</u> dalam fluida ($\text{m}^3$)</li>
+                    </ul>
+                `
+            },
+            5: {
+                title: "05. Mengapung, Melayang, dan Tenggelam",
+                category: "Kondisi Kesetimbangan",
+                content: `
+                    <div class="space-y-3">
+                        <div class="p-3 rounded-xl bg-emerald-950/40 border border-emerald-800">
+                            <h4 class="font-bold text-emerald-400">1. Mengapung ($\rho_b < \rho_f$)</h4>
+                            <p class="text-xs">Sebagian volume terendam ($V_t < V_b$). Gaya apung sama dengan berat benda ($F_A = W$).</p>
+                        </div>
+                        <div class="p-3 rounded-xl bg-amber-950/40 border border-amber-800">
+                            <h4 class="font-bold text-amber-400">2. Melayang ($\rho_b = \rho_f$)</h4>
+                            <p class="text-xs">Seluruh volume terendam ($V_t = V_b$). Benda seimbang di mana saja dalam fluida ($F_A = W$).</p>
+                        </div>
+                        <div class="p-3 rounded-xl bg-rose-950/40 border border-rose-800">
+                            <h4 class="font-bold text-rose-400">3. Tenggelam ($\rho_b > \rho_f$)</h4>
+                            <p class="text-xs">Benda turun ke dasar. Gaya apung lebih kecil dari berat benda ($F_A < W$), sehingga muncul gaya normal ($N$) dasar dasar.</p>
+                        </div>
+                    </div>
+                `
+            },
+            6: {
+                title: "06. Aplikasi Kehidupan Nyata",
+                category: "Penerapan",
+                content: `
+                    <p>Aplikasi Hukum Archimedes dalam dunia nyata meliputi:</p>
+                    <ul class="list-disc list-inside space-y-2 mt-2 text-xs text-slate-300">
+                        <li><b>Kapal Laut:</b> Memiliki rongga udara besar sehingga massa jenis rata-rata kapal lebih kecil dari air laut.</li>
+                        <li><b>Kapal Selam:</b> Mengatur tangki pemberat (ballast) untuk mengisi air (tenggelam) atau membuang air dengan udara bertekanan (mengapung).</li>
+                        <li><b>Hidrometer:</b> Alat pengukur massa jenis zat cair berdasarkan kedalaman bagian yang tercelup.</li>
+                    </ul>
+                `
+            }
+        };
+
+        function openMateriModal(id) {
+            const data = materiData[id];
+            if(!data) return;
+            document.getElementById('materi-modal-title-container').innerHTML = `
+                <span class="text-xs font-mono font-bold text-cyan-400 bg-cyan-950 px-2.5 py-1 rounded-md border border-cyan-800">${data.category}</span>
+                <h2 class="text-xl font-bold text-white mt-1">${data.title}</h2>
+            `;
+            document.getElementById('materi-modal-body').innerHTML = data.content;
+            document.getElementById('materi-modal').classList.remove('hidden');
+            if(window.MathJax) MathJax.typesetPromise();
+        }
+
+        function closeMateriModal() {
+            document.getElementById('materi-modal').classList.add('hidden');
+        }
+
+
+        /* ================= THREE.JS SIMULASI 1: HUKUM PASCAL ================= */
+        let sceneP, cameraP, rendererP, controlsP;
+        let piston1, piston2, fluidLine, weightObject;
+
+        function initPascalSim() {
+            const container = document.getElementById('canvas-pascal');
+            if(!container) return;
+
+            sceneP = new THREE.Scene();
+            sceneP.background = new THREE.Color(0x0a0f1d);
+
+            cameraP = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            cameraP.position.set(0, 4, 10);
+
+            rendererP = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            rendererP.setSize(container.clientWidth, container.clientHeight);
+            rendererP.setPixelRatio(window.devicePixelRatio);
+            rendererP.shadowMap.enabled = true;
+            container.appendChild(rendererP.domElement);
+
+            controlsP = new THREE.OrbitControls(cameraP, rendererP.domElement);
+            controlsP.enableDamping = true;
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+            sceneP.add(ambientLight);
+            const dirLight = new THREE.DirectionalLight(0x00b4d8, 1);
+            dirLight.position.set(5, 10, 5);
+            sceneP.add(dirLight);
+
+            // Hydraulic Pipes (Glass Tube)
+            const pipeMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.3,
+                roughness: 0.1,
+                transmission: 0.9
+            });
+
+            // Small Piston Cylinder
+            const cyl1Geo = new THREE.CylinderGeometry(0.6, 0.6, 3, 32);
+            const cyl1 = new THREE.Mesh(cyl1Geo, pipeMaterial);
+            cyl1.position.set(-2.5, 0, 0);
+            sceneP.add(cyl1);
+
+            // Large Piston Cylinder
+            const cyl2Geo = new THREE.CylinderGeometry(1.5, 1.5, 3, 32);
+            const cyl2 = new THREE.Mesh(cyl2Geo, pipeMaterial);
+            cyl2.position.set(2.5, 0, 0);
+            sceneP.add(cyl2);
+
+            // Bottom Connecting Pipe
+            const pipeGeo = new THREE.CylinderGeometry(0.4, 0.4, 5, 32);
+            const pipe = new THREE.Mesh(pipeGeo, pipeMaterial);
+            pipe.rotation.z = Math.PI / 2;
+            pipe.position.set(0, -1.3, 0);
+            sceneP.add(pipe);
+
+            // Fluid Mesh (Cyan)
+            const fluidMat = new THREE.MeshStandardMaterial({ color: 0x00b4d8, transparent: true, opacity: 0.8 });
+            const fluidGeo = new THREE.CylinderGeometry(0.58, 0.58, 1.8, 32);
+            const fluid1 = new THREE.Mesh(fluidGeo, fluidMat);
+            fluid1.position.set(-2.5, -0.6, 0);
+            sceneP.add(fluid1);
+
+            const fluidGeo2 = new THREE.CylinderGeometry(1.48, 1.48, 1.8, 32);
+            const fluid2 = new THREE.Mesh(fluidGeo2, fluidMat);
+            fluid2.position.set(2.5, -0.6, 0);
+            sceneP.add(fluid2);
+
+            // Pistons
+            const pistonMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, metalness: 0.8 });
+            piston1 = new THREE.Mesh(new THREE.CylinderGeometry(0.58, 0.58, 0.3, 32), pistonMat);
+            piston1.position.set(-2.5, 0.3, 0);
+            sceneP.add(piston1);
+
+            piston2 = new THREE.Mesh(new THREE.CylinderGeometry(1.48, 1.48, 0.3, 32), pistonMat);
+            piston2.position.set(2.5, 0.3, 0);
+            sceneP.add(piston2);
+
+            // Car / Load Weight on Piston 2
+            const weightMat = new THREE.MeshStandardMaterial({ color: 0xff9f1c });
+            weightObject = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.8, 1.2), weightMat);
+            weightObject.position.set(2.5, 0.85, 0);
+            sceneP.add(weightObject);
+
+            animatePascal();
+        }
+
+        function animatePascal() {
+            requestAnimationFrame(animatePascal);
+            if(controlsP) controlsP.update();
+            if(rendererP && sceneP && cameraP) rendererP.render(sceneP, cameraP);
+        }
+
+        function onWindowResizePascal() {
+            const container = document.getElementById('canvas-pascal');
+            if(!container || !rendererP) return;
+            cameraP.aspect = container.clientWidth / container.clientHeight;
+            cameraP.updateProjectionMatrix();
+            rendererP.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function updatePascalSim() {
+            const f1 = parseFloat(document.getElementById('input-f1').value);
+            const a1 = parseFloat(document.getElementById('input-a1').value);
+            const a2 = parseFloat(document.getElementById('input-a2').value);
+
+            document.getElementById('val-f1').innerText = `${f1} N`;
+            document.getElementById('val-a1').innerText = `${a1} cm²`;
+            document.getElementById('val-a2').innerText = `${a2} cm²`;
+
+            const a1_m2 = a1 * 1e-4;
+            const a2_m2 = a2 * 1e-4;
+            const p = f1 / a1_m2;
+            const f2 = p * a2_m2;
+            const ratio = (a2 / a1).toFixed(1);
+
+            document.getElementById('res-pascal-p').innerText = `${p.toLocaleString('id-ID')} Pa`;
+            document.getElementById('res-pascal-f2').innerText = `${f2.toLocaleString('id-ID')} N`;
+            document.getElementById('res-pascal-ratio').innerText = `${ratio}x`;
+            document.getElementById('res-pascal-desc').innerText = `Luas A2 ${ratio} kali dari A1, menghasilkan gaya F2 ${ratio} kali lebih besar.`;
+
+            // Adjust 3D piston scales visually
+            if(piston1 && piston2) {
+                const r1 = Math.sqrt(a1 / Math.PI) * 0.25;
+                const r2 = Math.sqrt(a2 / Math.PI) * 0.25;
+                piston1.scale.set(r1, 1, r1);
+                piston2.scale.set(r2, 1, r2);
+            }
+        }
+
+        function pressPascalPiston() {
+            let step = 0;
+            const interval = setInterval(() => {
+                step += 0.05;
+                if(step <= 1) {
+                    piston1.position.y = 0.3 - step * 0.6;
+                    piston2.position.y = 0.3 + step * 0.3;
+                    weightObject.position.y = 0.85 + step * 0.3;
+                } else {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        // Reset positions
+                        piston1.position.y = 0.3;
+                        piston2.position.y = 0.3;
+                        weightObject.position.y = 0.85;
+                    }, 1000);
+                }
+            }, 30);
+        }
+
+        function resetPascalSim() {
+            if(controlsP) {
+                cameraP.position.set(0, 4, 10);
+                controlsP.target.set(0, 0, 0);
+            }
+        }
+
+
+        /* ================= THREE.JS SIMULASI 2: HUKUM ARCHIMEDES ================= */
+        let sceneA, cameraA, rendererA, controlsA;
+        let objCube, fluidMesh, arrowFA, arrowW;
+
+        function initArchimedesSim() {
+            const container = document.getElementById('canvas-archimedes');
+            if(!container) return;
+
+            sceneA = new THREE.Scene();
+            sceneA.background = new THREE.Color(0x0a0f1d);
+
+            cameraA = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+            cameraA.position.set(0, 3, 8);
+
+            rendererA = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            rendererA.setSize(container.clientWidth, container.clientHeight);
+            rendererA.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(rendererA.domElement);
+
+            controlsA = new THREE.OrbitControls(cameraA, rendererA.domElement);
+            controlsA.enableDamping = true;
+
+            // Lights
+            sceneA.add(new THREE.AmbientLight(0xffffff, 0.7));
+            const dirLight = new THREE.DirectionalLight(0xff9f1c, 1);
+            dirLight.position.set(5, 10, 5);
+            sceneA.add(dirLight);
+
+            // Transparent Glass Tank
+            const tankGeo = new THREE.BoxGeometry(3.2, 4, 3.2);
+            const tankMat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, transparent: true, opacity: 0.2, roughness: 0.1 });
+            const tank = new THREE.Mesh(tankGeo, tankMat);
+            sceneA.add(tank);
+
+            // Fluid
+            const fluidGeo = new THREE.BoxGeometry(3.1, 2.8, 3.1);
+            const fluidMat = new THREE.MeshStandardMaterial({ color: 0x00b4d8, transparent: true, opacity: 0.6 });
+            fluidMesh = new THREE.Mesh(fluidGeo, fluidMat);
+            fluidMesh.position.y = -0.5;
+            sceneA.add(fluidMesh);
+
+            // Floating / Sinking Cube Object
+            const cubeGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+            const cubeMat = new THREE.MeshStandardMaterial({ color: 0xff70a6 });
+            objCube = new THREE.Mesh(cubeGeo, cubeMat);
+            objCube.position.set(0, 2, 0);
+            sceneA.add(objCube);
+
+            // Force Vectors Arrows
+            arrowFA = new THREE.ArrowHelper(new THREE.Vector3(0, 1, 0), new THREE.Vector3(0, 0, 0), 1.5, 0x00ffcc);
+            arrowW = new THREE.ArrowHelper(new THREE.Vector3(0, -1, 0), new THREE.Vector3(0, 0, 0), 1.5, 0xff3366);
+            sceneA.add(arrowFA);
+            sceneA.add(arrowW);
+
+            animateArchimedes();
+        }
+
+        function animateArchimedes() {
+            requestAnimationFrame(animateArchimedes);
+            if(controlsA) controlsA.update();
+            if(rendererA && sceneA && cameraA) rendererA.render(sceneA, cameraA);
+        }
+
+        function onWindowResizeArchimedes() {
+            const container = document.getElementById('canvas-archimedes');
+            if(!container || !rendererA) return;
+            cameraA.aspect = container.clientWidth / container.clientHeight;
+            cameraA.updateProjectionMatrix();
+            rendererA.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        function updateArchimedesSim() {
+            const rho_f = parseFloat(document.getElementById('select-fluida').value);
+            const mass = parseFloat(document.getElementById('input-mass').value);
+            const vol = parseFloat(document.getElementById('input-vol').value);
+
+            document.getElementById('val-mass').innerText = `${mass.toFixed(2)} kg`;
+            document.getElementById('val-vol').innerText = `${vol.toFixed(4)} m³`;
+
+            const g = 9.8;
+            const rho_b = mass / vol;
+            const w = mass * g;
+            
+            let fa = 0;
+            let status = "";
+            let statusClass = "";
+
+            if(rho_b < rho_f) {
+                status = "Mengapung";
+                statusClass = "px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800";
+                fa = w; // Equilibrium FA = W
+            } else if(Math.abs(rho_b - rho_f) < 10) {
+                status = "Melayang";
+                statusClass = "px-2 py-0.5 rounded text-[11px] font-bold bg-amber-950 text-amber-400 border border-amber-800";
+                fa = w;
+            } else {
+                status = "Tenggelam";
+                statusClass = "px-2 py-0.5 rounded text-[11px] font-bold bg-rose-950 text-rose-400 border border-rose-800";
+                fa = rho_f * g * vol;
+            }
+
+            document.getElementById('res-arch-rhob').innerText = `${Math.round(rho_b)} kg/m³`;
+            document.getElementById('res-arch-w').innerText = `${w.toFixed(2)} N`;
+            document.getElementById('res-arch-fa').innerText = `${fa.toFixed(2)} N`;
+            
+            const badge = document.getElementById('res-arch-status');
+            badge.innerText = status;
+            badge.className = statusClass;
+
+            // Fluid color theme adjustment
+            if(rho_f == 800) fluidMesh.material.color.setHex(0xffaa00); // Oil
+            else if(rho_f == 1025) fluidMesh.material.color.setHex(0x0077b6); // Seawater
+            else fluidMesh.material.color.setHex(0x00b4d8); // Water
+        }
+
+        function dropArchimedesObject() {
+            const rho_f = parseFloat(document.getElementById('select-fluida').value);
+            const mass = parseFloat(document.getElementById('input-mass').value);
+            const vol = parseFloat(document.getElementById('input-vol').value);
+            const rho_b = mass / vol;
+
+            let targetY = 0;
+            if(rho_b < rho_f) {
+                const ratioSubmerged = rho_b / rho_f;
+                targetY = 0.9 - (ratioSubmerged * 0.8);
+            } else if(Math.abs(rho_b - rho_f) < 10) {
+                targetY = -0.3; // Floating mid tank
+            } else {
+                targetY = -1.3; // Sunk to bottom
+            }
+
+            let currentY = 2;
+            const interval = setInterval(() => {
+                currentY -= 0.05;
+                if(currentY <= targetY) {
+                    currentY = targetY;
+                    clearInterval(interval);
+                }
+                objCube.position.y = currentY;
+                arrowFA.position.set(0, currentY, 0);
+                arrowW.position.set(0, currentY, 0);
+            }, 30);
+        }
+
+        function resetArchimedesSim() {
+            if(controlsA) {
+                cameraA.position.set(0, 3, 8);
+                controlsA.target.set(0, 0, 0);
+            }
+            if(objCube) objCube.position.set(0, 2, 0);
+        }
+
+
+        /* ================= WebAR LAUNCHER ================= */
+        function triggerAR(type) {
+            if (navigator.xr) {
+                navigator.xr.isSessionSupported('immersive-ar').then((supported) => {
+                    if (supported) {
+                        alert(`Memulai Sesi WebAR untuk Eksperimen ${type.toUpperCase()}. Arahkan kamera ke permukaan datar.`);
+                    } else {
+                        alert("WebXR AR tidak didukung pada browser/perangkat ini. Menampilkan simulasi 3D standar.");
+                    }
+                });
+            } else {
+                alert("Fitur WebAR memerlukan browser dengan dukungan WebXR (seperti Chrome di Android). Anda tetap dapat menggunakan simulasi 3D interaktif ini.");
+            }
+        }
+
+
+        /* ================= LKPD DOWNLOAD FUNCTIONALITY ================= */
+        function downloadLKPD(type) {
+            const title = type === 'pascal' ? 'LKPD 1 - Hukum Pascal' : 'LKPD 2 - Hukum Archimedes';
+            const content = type === 'pascal' ? `
+                =======================================================
+                LEMBA WORK PESERTA DIDIK (LKPD) VIRTUAL
+                TOPIK: HUKUM PASCAL & SISTEM HIDROLIK
+                =======================================================
+                Nama Siswa: ____________________
+                Kelas     : ____________________
+                Tanggal   : ${new Date().toLocaleDateString('id-ID')}
+
+                A. TUJUAN PERCOBAAN:
+                Menyelidiki hubungan antara gaya masukan (F1), luas penampang piston (A1, A2), 
+                dan gaya keluaran (F2) pada sistem hidrolik.
+
+                B. TABEL DATA PENGAMATAN (Gaya Masukan F1 = 100 N, A1 = 5 cm2):
+                -------------------------------------------------------------------
+                No | Luas Piston Besar (A2) | Tekanan P (Pa) | Gaya Keluaran F2 (N)
+                -------------------------------------------------------------------
+                1  | 25 cm2                 | ...            | ...
+                2  | 50 cm2                 | ...            | ...
+                3  | 100 cm2                | ...            | ...
+                -------------------------------------------------------------------
+
+                C. PERTANYAAN ANALISIS:
+                1. Bagaimana perubahan gaya keluaran F2 saat luas piston besar A2 diperbesar?
+                2. Hitunglah perbandingan F2/F1 dan A2/A1 untuk setiap percobaan. Apa kesimpulanmu?
+            ` : `
+                =======================================================
+                LEMBAR WORK PESERTA DIDIK (LKPD) VIRTUAL
+                TOPIK: HUKUM ARCHIMEDES & GAYA APUNG
+                =======================================================
+                Nama Siswa: ____________________
+                Kelas     : ____________________
+                Tanggal   : ${new Date().toLocaleDateString('id-ID')}
+
+                A. TUJUAN PERCOBAAN:
+                Menganalisis faktor yang mempengaruhi gaya apung (FA) dan menentukan 
+                kondisi mengapung, melayang, dan tenggelam.
+
+                B. TABEL DATA PENGAMATAN (Fluida: Air Murni 1.000 kg/m3):
+                ---------------------------------------------------------------------------
+                No | Massa Benda (kg) | Volume (m3) | Massa Jenis (kg/m3) | Kondisi Benda
+                ---------------------------------------------------------------------------
+                1  | 0.25 kg          | 0.0005 m3   | ...                 | ...
+                2  | 0.50 kg          | 0.0005 m3   | ...                 | ...
+                3  | 0.80 kg          | 0.0005 m3   | ...                 | ...
+                ---------------------------------------------------------------------------
+
+                C. PERTANYAAN ANALISIS:
+                1. Kapan suatu benda dikatakan mengapung, melayang, dan tenggelam?
+                2. Jelaskan hubungan massa jenis benda (rho_b) dengan massa jenis fluida (rho_f)!
+            `;
+
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${title}.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+
+        /* ================= QUIZ & EVALUATION SYSTEM ================= */
+        const quizQuestions = [
+            {
+                category: "Hukum Pascal",
+                question: "Sebuah dongkrak hidrolik memiliki luas penampang kecil 4 cm² dan penampang besar 80 cm². Jika gaya masukan 50 N, berapa gaya keluaran idealnya?",
+                options: ["100 N", "250 N", "500 N", "1.000 N"],
+                answer: 3,
+                explanation: "Menggunakan Hukum Pascal: F2 = F1 * (A2 / A1) = 50 * (80 / 4) = 50 * 20 = 1.000 N."
+            },
+            {
+                category: "Hukum Pascal",
+                question: "Prinsip utama yang mendasari Hukum Pascal pada fluida dalam ruang tertutup adalah...",
+                options: [
+                    "Tekanan bertambah seiring kedalaman",
+                    "Tekanan diteruskan sama besar ke segala arah",
+                    "Gaya apung sama dengan berat benda",
+                    "Massa jenis fluida selalu konstan"
+                ],
+                answer: 1,
+                explanation: "Hukum Pascal menyatakan tekanan yang diberikan pada fluida ruang tertutup diteruskan sama besar ke segala arah."
+            },
+            {
+                category: "Hukum Pascal",
+                question: "Jika luas piston besar A2 dijadikan 4 kali semula sedangkan variabel lain tetap, maka gaya keluaran F2 akan menjadi...",
+                options: ["1/4 kali semula", "Tetap", "2 kali semula", "4 kali semula"],
+                answer: 3,
+                explanation: "Karena F2 berbanding lurus dengan A2 (F2 = P * A2), membesarkan A2 sebesar 4 kali akan membuat F2 menjadi 4 kali semula."
+            },
+            {
+                category: "Hukum Pascal",
+                question: "Manakah dari alat-alat berikut yang memanfaatkan Hukum Pascal?",
+                options: ["Kapal Laut & Hidrometer", "Dongkrak Hidrolik & Rem Mobil", "Galangan Kapal & Balon Udara", "Venturimeter & Sayap Pesawat"],
+                answer: 1,
+                explanation: "Dongkrak hidrolik dan sistem rem hidrolik memanfaatkan penerusan tekanan zat cair Hukum Pascal."
+            },
+            {
+                category: "Hukum Pascal",
+                question: "Pada sistem hidrolik ideal, jika piston kecil tertekan sejauh d1, piston besar terangkat sejauh d2. Hubungan yang benar adalah...",
+                options: ["A1 * d1 = A2 * d2", "A1 * A2 = d1 * d2", "F1 * A1 = F2 * A2", "d1 = d2"],
+                answer: 0,
+                explanation: "Volume fluida yang berpindah konstan (V1 = V2), sehingga A1 * d1 = A2 * d2."
+            },
+            {
+                category: "Hukum Archimedes",
+                question: "Sebuah benda memindahkan air sebanyak 0,002 m³. Jika massa jenis air 1.000 kg/m³ dan g = 9.8 m/s², tentukan gaya apungnya!",
+                options: ["9.8 N", "19.6 N", "196 N", "1.000 N"],
+                answer: 1,
+                explanation: "FA = rho_f * g * Vt = 1.000 * 9.8 * 0.002 = 19.6 N."
+            },
+            {
+                category: "Hukum Archimedes",
+                question: "Syarat utama agar sebuah benda dapat mengapung di permukaan fluida adalah...",
+                options: ["rho_b > rho_f", "rho_b = rho_f", "rho_b < rho_f", "Massa benda > massa fluida"],
+                answer: 2,
+                explanation: "Benda mengapung jika massa jenis rata-rata benda (rho_b) lebih kecil dari massa jenis fluida (rho_f)."
+            },
+            {
+                category: "Hukum Archimedes",
+                question: "Suatu benda melayang sempurna di dalam zat cair. Pernyataan yang benar mengenai gaya apung (FA) dan berat benda (W) adalah...",
+                options: ["FA > W", "FA < W", "FA = W", "FA = 0"],
+                answer: 2,
+                explanation: "Pada keadaan melayang (maupun mengapung setimbang), gaya apung persis sama dengan berat benda (FA = W)."
+            },
+            {
+                category: "Hukum Archimedes",
+                question: "Mengapa kapal laut yang terbuat dari besi baja dapat mengapung di atas air laut?",
+                options: [
+                    "Besi memiliki gaya apung alami",
+                    "Bentuk kapal memiliki rongga udara sehingga massa jenis rata-ratanya lebih kecil dari air",
+                    "Air laut memiliki massa jenis lebih kecil dari air murni",
+                    "Benda logam tidak dipengaruhi gravitasi di laut"
+                ],
+                answer: 1,
+                explanation: "Rongga udara membuat volume total kapal sangat besar sehingga massa jenis rata-rata kapal lebih kecil dari air laut."
+            },
+            {
+                category: "Hukum Archimedes",
+                question: "Alat pengukur massa jenis zat cair yang bekerja berdasarkan prinsip Archimedes dinamakan...",
+                options: ["Manometer", "Barometer", "Hidrometer", "Termometer"],
+                answer: 2,
+                explanation: "Hidrometer dimasukkan ke dalam fluida dan nilai massa jenis dibaca berdasarkan kedalaman tangkai yang tercelup."
+            }
+        ];
+
+        let currentQuizIndex = 0;
+        let quizAnswers = new Array(quizQuestions.length).fill(null);
+
+        function renderQuizQuestion() {
+            const q = quizQuestions[currentQuizIndex];
+            document.getElementById('quiz-progress').innerText = `${currentQuizIndex + 1} / ${quizQuestions.length}`;
+            document.getElementById('quiz-category').innerText = q.category;
+            document.getElementById('quiz-question').innerText = q.question;
+
+            const optionsContainer = document.getElementById('quiz-options');
+            optionsContainer.innerHTML = '';
+
+            q.options.forEach((opt, idx) => {
+                const isSelected = quizAnswers[currentQuizIndex] === idx;
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left p-4 rounded-2xl border transition-all text-xs sm:text-sm font-medium flex items-center justify-between ${
+                    isSelected 
+                    ? 'bg-cyan-500/20 border-cyan-400 text-cyan-200' 
+                    : 'bg-slate-900/60 border-slate-800 text-slate-300 hover:bg-slate-800/60'
+                }`;
+                btn.onclick = () => selectQuizOption(idx);
+                btn.innerHTML = `
+                    <div class="flex items-center space-x-3">
+                        <span class="w-6 h-6 rounded-lg bg-slate-800 flex items-center justify-center font-mono font-bold text-xs text-slate-400">${String.fromCharCode(65 + idx)}</span>
+                        <span>${opt}</span>
+                    </div>
+                    ${isSelected ? '<i class="fa-solid fa-circle-check text-cyan-400"></i>' : ''}
+                `;
+                optionsContainer.appendChild(btn);
+            });
+
+            // Handle explanation view if answered
+            const expBox = document.getElementById('quiz-explanation');
+            if(quizAnswers[currentQuizIndex] !== null) {
+                const isCorrect = quizAnswers[currentQuizIndex] === q.answer;
+                expBox.classList.remove('hidden');
+                expBox.className = `p-4 rounded-2xl border space-y-2 text-xs leading-relaxed ${
+                    isCorrect ? 'bg-emerald-950/40 border-emerald-800 text-emerald-200' : 'bg-rose-950/40 border-rose-800 text-rose-200'
+                }`;
+                expBox.innerHTML = `
+                    <div class="font-bold flex items-center space-x-2">
+                        <i class="fa-solid ${isCorrect ? 'fa-circle-check text-emerald-400' : 'fa-circle-xmark text-rose-400'}"></i>
+                        <span>${isCorrect ? 'Jawaban Benar!' : 'Jawaban Kurang Tepat'}</span>
+                    </div>
+                    <p class="text-slate-300">${q.explanation}</p>
+                `;
+            } else {
+                expBox.classList.add('hidden');
+            }
+
+            // Update Score
+            calculateQuizScore();
+
+            // Prev/Next buttons
+            document.getElementById('btn-prev-quiz').disabled = currentQuizIndex === 0;
+            const nextBtn = document.getElementById('btn-next-quiz');
+            if(currentQuizIndex === quizQuestions.length - 1) {
+                nextBtn.innerHTML = `Selesai <i class="fa-solid fa-flag-checkered ml-1"></i>`;
+            } else {
+                nextBtn.innerHTML = `Selanjutnya <i class="fa-solid fa-arrow-right ml-1"></i>`;
+            }
+        }
+
+        function selectQuizOption(idx) {
+            quizAnswers[currentQuizIndex] = idx;
+            renderQuizQuestion();
+        }
+
+        function navigateQuiz(dir) {
+            currentQuizIndex += dir;
+            if(currentQuizIndex < 0) currentQuizIndex = 0;
+            if(currentQuizIndex >= quizQuestions.length) {
+                currentQuizIndex = quizQuestions.length - 1;
+                alert(`Evaluasi Selesai! Skor Akhir Anda: ${calculateQuizScore()} / 100 Poin`);
+            }
+            renderQuizQuestion();
+        }
+
+        function calculateQuizScore() {
+            let correctCount = 0;
+            quizAnswers.forEach((ans, idx) => {
+                if(ans === quizQuestions[idx].answer) correctCount++;
+            });
+            const score = correctCount * 10;
+            document.getElementById('quiz-score').innerText = `${score} Poin`;
+            return score;
+        }
+
+
+        /* ================= INITIALIZATION ON PAGE LOAD ================= */
+        window.addEventListener('load', () => {
+            initPascalSim();
+            initArchimedesSim();
+            updatePascalSim();
+            updateArchimedesSim();
+            renderQuizQuestion();
+
+            window.addEventListener('resize', () => {
+                onWindowResizePascal();
+                onWindowResizeArchimedes();
+            });
+        });
+    </script>
+</body>
+</html>
